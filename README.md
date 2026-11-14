@@ -11,6 +11,8 @@
 
 ## 获取与构建
 
+**免安装使用**：直接下载 [Releases · ServerPilot 1.0.0](https://github.com/allen2020vip/ServerPilot/releases/download/v1.0.0/ServerPilot-1.0.0-portable.exe) 的 `ServerPilot-1.0.0-portable.exe`（71.96 MB），双击即可运行，无需安装。
+
 仓库只收录源码，不含打包产物（`dist/` 与 `node_modules/` 已在 `.gitignore` 中排除）。
 
 ```powershell
@@ -34,7 +36,7 @@ $env:ELECTRON_BUILDER_BINARIES_MIRROR = "https://npmmirror.com/mirrors/electron-
 
 ## 快速开始
 
-1. 双击运行 `dist\ServerPilot-1.0.0-portable.exe`（免安装，可直接拷到任意 Windows 10/11 机器）。
+1. 双击运行 `dist\ServerPilot-1.0.0-portable.exe`（免安装，可直接拷到任意 Windows 10/11 机器），或从 [Releases](https://github.com/allen2020vip/ServerPilot/releases) 下载同款便携版。
 2. 点击左下角 **新建连接**，填写主机地址、端口、用户名与密码（或选择私钥认证）。
 3. 点击 **测试连接** 确认可达，保存后软件会自动连接并加载系统概览。
 4. 顶部五个标签：**概览 / 文件 / 终端 / 部署 / 命令**。
