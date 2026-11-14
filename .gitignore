@@ -1,0 +1,29 @@
+# 依赖
+node_modules/
+
+# 打包产物（从 Releases 下载，不入库）
+dist/
+*.exe
+*.msi
+
+# electron-builder 临时文件
+app/dist/
+builder-debug.yml
+builder-effective-config.yaml
+
+# 本地测试与截图
+.shots/
+app/tools/mockroot/
+sp-debug.log
+*.log
+
+# 系统与编辑器
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/
+
+# 本地凭据（绝不入库）
+serverpilot.json
+*.spkey

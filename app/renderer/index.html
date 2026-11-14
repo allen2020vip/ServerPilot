@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:;" />
+<title>ServerPilot</title>
+<link rel="stylesheet" href="../node_modules/@xterm/xterm/css/xterm.css" />
+<link rel="stylesheet" href="../node_modules/codemirror/lib/codemirror.css" />
+<link rel="stylesheet" href="styles.css" />
+<script>
+  /* 首帧前恢复主题，避免浅色模式闪一下深色 */
+  try {
+    var savedTheme = window.api && window.api.theme ? window.api.theme.get() : null;
+    if (savedTheme === 'light') document.documentElement.setAttribute('data-theme', 'light');
+  } catch (e) {}
+</script>
+</head>
+<body>
+<svg style="display:none" aria-hidden="true">
+  <symbol id="i-server" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="2"/><rect x="3" y="14" width="18" height="6" rx="2"/><circle cx="7" cy="7" r="1"/><circle cx="7" cy="17" r="1"/><path d="M12 7h5M12 17h5"/></symbol>
+  <symbol id="i-terminal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M7 9l3 3-3 3M13 15h4"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7.5A1.5 1.5 0 014.5 6h4l2 2.5h7.5A1.5 1.5 0 0118 10v7.5A1.5 1.5 0 0116.5 19h-12A1.5 1.5 0 013 17.5z"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3.5h7l5 5v12A1.5 1.5 0 0116.5 21h-10A1.5 1.5 0 014.5 19.5v-16"/><path d="M13 3.5v5h5"/></symbol>
+  <symbol id="i-rocket" viewBox="0 0 24 24"><path d="M5 15l-1 5 5-1 9-9a5 5 0 00-7-7z"/><circle cx="9.5" cy="14.5" r="1.2"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5l10 6.5-10 6.5z"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 10-2.5 5.7"/><path d="M20 4v7h-7"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4M7.5 8.5L12 4l4.5 4.5"/><path d="M4 17v2.5A1.5 1.5 0 015.5 21h9A1.5 1.5 0 0120 19.5V17"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v12M7.5 11.5L12 16l4.5-4.5"/><path d="M4 17v2.5A1.5 1.5 0 015.5 21h9A1.5 1.5 0 0120 19.5V17"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M16.5 3.5l4 4L9 19l-5 1 1-5z"/><path d="M14.5 5.5l4 4"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13.5h9l1-13.5"/><path d="M10 11v6M14 11v6"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6l-12 12"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></symbol>
+  <symbol id="i-cpu" viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="2"/><path d="M10 3v3M14 3v3M10 18v3M14 18v3M3 10h3M3 14h3M18 10h3M18 14h3"/></symbol>
+  <symbol id="i-memory" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="9" rx="2"/><path d="M7 17v3M12 17v3M17 17v3M6 12h3M11 12h3M16 12h2"/></symbol>
+  <symbol id="i-disk" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2.5"/><circle cx="12" cy="12" r="3.4"/><path d="M6.5 12h1"/></symbol>
+  <symbol id="i-pulse" viewBox="0 0 24 24"><path d="M3 12h4l2.5-6 4 12L16 12h5"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 13l4.5 4.5L19 7"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3.5l9 16h-18z"/><path d="M12 9v4.5M12 16.5v.5"/></symbol>
+  <symbol id="i-power" viewBox="0 0 24 24"><path d="M12 3v9"/><path d="M7 6.5a7 7 0 109.5 0"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2h2"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="18" cy="12" r="1.3"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8.5" cy="15.5" r="3.5"/><path d="M11 13L20 4M17 4h3v3"/></symbol>
+  <symbol id="i-code" viewBox="0 0 24 24"><path d="M8 7l-4 5 4 5M16 7l4 5-4 5"/></symbol>
+  <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="i-save" viewBox="0 0 24 24"><path d="M4 6a2 2 0 012-2h9l5 5v11a2 2 0 01-2 2H6a2 2 0 01-2-2z"/><path d="M8 4v6h8M8 20v-5h8v5"/></symbol>
+  <symbol id="i-slash" viewBox="0 0 24 24"><path d="M15 5L9 19"/></symbol>
+  <symbol id="i-plug" viewBox="0 0 24 24"><path d="M9 3v5M15 3v5"/><path d="M6.5 8h11v3.5a5.5 5.5 0 01-11 0z"/><path d="M12 17v4"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.1"/><path d="M12 2.6v2.1M12 19.3v2.1M4.6 4.6l1.5 1.5M17.9 17.9l1.5 1.5M2.6 12h2.1M19.3 12h2.1M4.6 19.4l1.5-1.5M17.9 6.1l1.5-1.5"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.6l2.6 5.3 5.9.85-4.25 4.15 1 5.9L12 17.1l-5.25 2.6 1-5.9L3.5 9.75l5.9-.85z"/></symbol>
+</svg>
+
+<div class="app">
+  <header class="titlebar">
+    <div class="tb-drag">
+      <div class="brand">
+        <div class="brand-mark"><i></i></div>
+        <div class="brand-text">Server<span>Pilot</span></div>
+        <div class="brand-tag">SERVER WORKSPACE</div>
+      </div>
+    </div>
+    <div class="tb-actions">
+      <button class="tb-btn" id="btnQuick" title="快速连接 (Ctrl+K)">
+        <svg class="ic"><use href="#i-search"/></svg>
+        <span>快速连接</span>
+        <kbd>Ctrl K</kbd>
+      </button>
+      <button class="tb-btn icon" id="btnTheme" title="切换浅色模式">
+        <svg class="ic"><use href="#i-moon"/></svg>
+      </button>
+      <div class="tb-sep"></div>
+      <button class="win-btn" id="winMin"><svg viewBox="0 0 10 10"><path d="M1 5h8"/></svg></button>
+      <button class="win-btn" id="winMax"><svg viewBox="0 0 10 10"><rect x="1.5" y="1.5" width="7" height="7" rx="1"/></svg></button>
+      <button class="win-btn danger" id="winClose"><svg viewBox="0 0 10 10"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7"/></svg></button>
+    </div>
+  </header>
+
+  <div class="body">
+    <aside class="sidebar">
+      <div class="side-top">
+        <div class="side-label">服务器 <span id="hostCount">0</span></div>
+        <div class="side-search">
+          <svg class="ic"><use href="#i-search"/></svg>
+          <input id="hostSearch" placeholder="筛选服务器…" spellcheck="false" />
+        </div>
+      </div>
+      <div class="host-list" id="hostList"></div>
+      <div class="side-bottom">
+        <button class="side-mcp" id="btnMcp">
+          <span class="mcp-dot" id="mcpSideDot"></span>
+          <div class="side-mcp-txt">
+            <b>MCP 服务</b>
+            <small id="mcpSideInfo">正在启动…</small>
+          </div>
+          <svg class="ic"><use href="#i-chevron"/></svg>
+        </button>
+        <button class="btn btn-primary btn-block" id="btnAddHost">
+          <svg class="ic"><use href="#i-plus"/></svg><span>新建连接</span>
+        </button>
+        <div class="side-hint">凭据仅保存于本机，并使用系统级加密</div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="empty" id="emptyState">
+        <div class="empty-art">
+          <div class="orb"></div>
+          <svg class="ic"><use href="#i-server"/></svg>
+        </div>
+        <h1>连接你的第一台服务器</h1>
+        <p>交给 ServerPilot 一个 SSH 凭据，即可获得文件管理、在线编辑与一键部署能力。</p>
+        <button class="btn btn-primary btn-lg" id="btnAddHostEmpty">
+          <svg class="ic"><use href="#i-plus"/></svg><span>新建连接</span>
+        </button>
+        <div class="empty-feats">
+          <div><svg class="ic"><use href="#i-terminal"/></svg><span>交互式终端</span></div>
+          <div><svg class="ic"><use href="#i-folder"/></svg><span>SFTP 文件管理</span></div>
+          <div><svg class="ic"><use href="#i-rocket"/></svg><span>一键部署</span></div>
+        </div>
+      </div>
+
+      <div class="workspace" id="workspace" hidden>
+        <div class="ws-bar">
+          <div class="ws-ident">
+            <div class="ws-avatar" id="wsAvatar">S</div>
+            <div class="ws-name-block">
+              <div class="ws-name-row">
+                <div class="ws-name" id="wsName">—</div>
+                <div class="ws-status" id="wsStatus"><i></i><span>未连接</span></div>
+              </div>
+              <div class="ws-meta" id="wsMeta">—</div>
+            </div>
+          </div>
+          <div class="ws-actions">
+            <button class="btn btn-ghost" id="btnReconnect"><svg class="ic"><use href="#i-refresh"/></svg><span>重连</span></button>
+            <button class="btn btn-ghost danger" id="btnDisconnect"><svg class="ic"><use href="#i-power"/></svg><span>断开</span></button>
+            <button class="btn btn-icon" id="btnEditHost" title="编辑连接"><svg class="ic"><use href="#i-edit"/></svg></button>
+          </div>
+        </div>
+
+        <div class="tabs" id="tabs">
+          <button class="tab active" data-tab="overview"><svg class="ic"><use href="#i-pulse"/></svg>概览</button>
+          <button class="tab" data-tab="files"><svg class="ic"><use href="#i-folder"/></svg>文件</button>
+          <button class="tab" data-tab="terminal"><svg class="ic"><use href="#i-terminal"/></svg>终端</button>
+          <button class="tab" data-tab="deploy"><svg class="ic"><use href="#i-rocket"/></svg>部署</button>
+          <button class="tab" data-tab="run"><svg class="ic"><use href="#i-code"/></svg>命令</button>
+          <div class="tab-ink" id="tabInk"></div>
+        </div>
+
+        <div class="views" id="views">
+          <div class="view active" data-view="overview">
+            <div class="metrics" id="metrics">
+              <div class="metric" data-m="cpu">
+                <div class="m-top"><span class="m-label">CPU 负载</span><svg class="ic"><use href="#i-cpu"/></svg></div>
+                <div class="m-value" id="mCpu">—</div>
+                <div class="m-bar"><i id="mCpuBar"></i></div>
+                <div class="m-sub" id="mCpuSub">等待采集</div>
+              </div>
+              <div class="metric" data-m="mem">
+                <div class="m-top"><span class="m-label">内存</span><svg class="ic"><use href="#i-memory"/></svg></div>
+                <div class="m-value" id="mMem">—</div>
+                <div class="m-bar"><i id="mMemBar"></i></div>
+                <div class="m-sub" id="mMemSub">等待采集</div>
+              </div>
+              <div class="metric" data-m="disk">
+                <div class="m-top"><span class="m-label">磁盘</span><svg class="ic"><use href="#i-disk"/></svg></div>
+                <div class="m-value" id="mDisk">—</div>
+                <div class="m-bar"><i id="mDiskBar"></i></div>
+                <div class="m-sub" id="mDiskSub">等待采集</div>
+              </div>
+              <div class="metric" data-m="uptime">
+                <div class="m-top"><span class="m-label">运行时长</span><svg class="ic"><use href="#i-clock"/></svg></div>
+                <div class="m-value" id="mUptime">—</div>
+                <div class="m-bar dim"><i style="width:100%"></i></div>
+                <div class="m-sub" id="mLoadSub">—</div>
+              </div>
+            </div>
+
+            <div class="ov-grid">
+              <div class="card">
+                <div class="card-head">
+                  <span>系统信息</span>
+                  <button class="btn btn-icon sm" id="btnSysRefresh" title="刷新"><svg class="ic"><use href="#i-refresh"/></svg></button>
+                </div>
+                <div class="kv" id="sysInfo"></div>
+              </div>
+              <div class="card">
+                <div class="card-head"><span>快捷操作</span></div>
+                <div class="quick-actions">
+                  <button class="qa" data-act="terminal"><svg class="ic"><use href="#i-terminal"/></svg><b>打开终端</b><small>交互式 Shell</small></button>
+                  <button class="qa" data-act="files"><svg class="ic"><use href="#i-folder"/></svg><b>浏览文件</b><small>SFTP 管理</small></button>
+                  <button class="qa" data-act="favorites"><svg class="ic"><use href="#i-star"/></svg><b>收藏夹</b><small>常访问的路径</small></button>
+                  <button class="qa" data-act="deploy"><svg class="ic"><use href="#i-rocket"/></svg><b>部署应用</b><small>模板化执行</small></button>
+                  <button class="qa" data-act="top"><svg class="ic"><use href="#i-pulse"/></svg><b>进程排行</b><small>CPU / 内存 Top</small></button>
+                  <button class="qa danger wide" data-act="reboot">
+                    <svg class="ic"><use href="#i-power"/></svg>
+                    <div class="qa-txt"><b>重启服务器</b><small>下发 reboot 指令，连接会中断</small></div>
+                  </button>
+                </div>
+                <div class="card-head sub-head"><span>服务的运行状态</span></div>
+                <div class="svc-list" id="svcList"><div class="dim-text">点击下方按钮采集</div></div>
+                <button class="btn btn-ghost btn-block" id="btnSvcScan"><svg class="ic"><use href="#i-shield"/></svg><span>扫描服务状态</span></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="view" data-view="files">
+            <div class="files-head">
+              <div class="crumbs" id="crumbs"></div>
+              <div class="files-tools">
+                <button class="btn btn-icon sm" id="fileRefresh" title="刷新"><svg class="ic"><use href="#i-refresh"/></svg></button>
+                <button class="btn btn-ghost sm" id="fileMkdir"><svg class="ic"><use href="#i-plus"/></svg><span>新建文件夹</span></button>
+                <button class="btn btn-ghost sm" id="fileDownload"><svg class="ic"><use href="#i-download"/></svg><span>下载</span></button>
+                <button class="btn btn-primary sm" id="fileUpload"><svg class="ic"><use href="#i-upload"/></svg><span>上传</span></button>
+              </div>
+            </div>
+            <div class="file-panel" id="fileDrop">
+              <div class="file-list-head">
+                <button type="button" class="col sort" data-sort="name">名称<i class="ind"></i></button>
+                <button type="button" class="col sort" data-sort="size">大小<i class="ind"></i></button>
+                <button type="button" class="col sort" data-sort="mode">权限<i class="ind"></i></button>
+                <button type="button" class="col sort" data-sort="time">修改时间<i class="ind"></i></button>
+              </div>
+              <div class="file-list" id="fileList"></div>
+              <div class="file-empty" id="fileEmpty" hidden>该目录为空</div>
+              <div class="drop-mask" id="dropMask"><svg class="ic"><use href="#i-upload"/></svg><span>松开鼠标以上传到当前目录</span></div>
+            </div>
+          </div>
+
+          <div class="view" data-view="terminal">
+            <div class="term-bar">
+              <div class="term-tabs" id="termTabs"></div>
+              <div class="term-tools">
+                <button class="btn btn-icon sm" id="termNew" title="新终端"><svg class="ic"><use href="#i-plus"/></svg></button>
+                <button class="btn btn-icon sm" id="termClear" title="清屏"><svg class="ic"><use href="#i-slash"/></svg></button>
+              </div>
+            </div>
+            <div class="term-wrap"><div id="term"></div></div>
+          </div>
+
+          <div class="view" data-view="deploy">
+            <div class="deploy-grid">
+              <div class="tpl-panel">
+                <div class="panel-title">部署模板</div>
+                <div class="tpl-list" id="tplList"></div>
+              </div>
+              <div class="cfg-panel">
+                <div class="cfg-head">
+                  <div class="cfg-title" id="tplName">选择一个模板开始</div>
+                  <div class="cfg-sub" id="tplSub">所有步骤通过 SSH 执行，日志实时回传</div>
+                </div>
+                <div class="cfg-form" id="cfgForm"></div>
+                <div class="cfg-footer">
+                  <label class="switch"><input type="checkbox" id="sudoMode" /><span class="track"></span><em>非 root 用户自动使用 sudo</em></label>
+                  <button class="btn btn-primary" id="btnDeployRun" disabled><svg class="ic"><use href="#i-play"/></svg><span>开始部署</span></button>
+                </div>
+                <div class="log-card">
+                  <div class="log-head"><span>执行日志</span><button class="btn btn-ghost sm" id="btnClearLog">清空</button></div>
+                  <pre class="deploy-log" id="deployLog"></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="view" data-view="run">
+            <div class="run-bar">
+              <span class="prompt-sign">$</span>
+              <input id="cmdInput" placeholder="输入 Shell 命令，Enter 执行" spellcheck="false" autocomplete="off" />
+              <button class="btn btn-primary sm" id="btnRunCmd"><svg class="ic"><use href="#i-play"/></svg><span>执行</span></button>
+            </div>
+            <div class="run-suggest" id="runSuggest"></div>
+            <div class="log-card grow">
+              <div class="log-head"><span>输出</span><button class="btn btn-ghost sm" id="btnClearRun">清空</button></div>
+              <pre class="run-out" id="runOut"></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+<!-- ============ 新建 / 编辑连接 ============ -->
+<div class="overlay" id="hostModal" hidden>
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title" id="hostModalTitle">新建连接</div>
+        <div class="modal-desc">凭据保存在本机，密码经操作系统密钥加密</div>
+      </div>
+      <button class="btn btn-icon" id="hostModalClose"><svg class="ic"><use href="#i-close"/></svg></button>
+    </div>
+    <form id="hostForm" autocomplete="off">
+      <div class="modal-body">
+        <input type="hidden" id="hfId" />
+        <div class="grid2">
+          <label class="field"><span>名称</span><input id="hfName" placeholder="生产环境 · 上海" /></label>
+          <label class="field"><span>分组</span><input id="hfGroup" placeholder="默认分组" list="groupList" /><datalist id="groupList"></datalist></label>
+          <label class="field"><span>主机地址</span><input id="hfHost" placeholder="192.168.1.10 或 example.com" /></label>
+          <label class="field"><span>端口</span><input id="hfPort" value="22" /></label>
+          <label class="field"><span>用户名</span><input id="hfUser" value="root" /></label>
+          <label class="field"><span>认证方式</span>
+            <div class="seg" id="authSeg">
+              <button type="button" class="seg-btn active" data-auth="password">密码</button>
+              <button type="button" class="seg-btn" data-auth="key">密钥</button>
+            </div>
+          </label>
+        </div>
+
+        <div id="pwBlock" class="auth-block">
+          <label class="field"><span>密码</span><input id="hfPassword" type="password" placeholder="留空则沿用已保存密码" /></label>
+        </div>
+
+        <div id="keyBlock" class="auth-block" hidden>
+          <label class="field"><span>私钥文件</span>
+            <div class="row">
+              <input id="hfKeyPath" placeholder="C:\Users\...\.ssh\id_rsa" />
+              <button type="button" class="btn btn-ghost" id="btnPickKey"><svg class="ic"><use href="#i-folder"/></svg><span>浏览</span></button>
+            </div>
+          </label>
+          <label class="field"><span>私钥内容（可选，粘贴后覆盖文件路径）</span><textarea id="hfKeyContent" rows="4" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"></textarea></label>
+          <label class="field"><span>Passphrase</span><input id="hfPassphrase" type="password" placeholder="私钥口令，可留空" /></label>
+        </div>
+
+        <label class="field"><span>备注</span><input id="hfNote" placeholder="例如：官网主站 / 数据库从库" /></label>
+      </div>
+      <div class="modal-foot">
+        <div class="test-result" id="testResult"></div>
+        <button type="button" class="btn btn-ghost" id="btnTest"><svg class="ic"><use href="#i-pulse"/></svg><span>测试连接</span></button>
+        <button type="submit" class="btn btn-primary" id="btnSaveHost"><span>保存连接</span></button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============ 文件编辑器 ============ -->
+<div class="overlay editor-overlay" id="editorOverlay" hidden>
+  <div class="editor">
+    <div class="editor-head">
+      <div class="ed-file">
+        <svg class="ic"><use href="#i-file"/></svg>
+        <span id="edName">file</span>
+        <em id="edMeta"></em>
+      </div>
+      <div class="ed-actions">
+        <span class="ed-state" id="edState">已同步</span>
+        <button class="btn btn-ghost sm" id="edClose"><span>关闭</span></button>
+        <button class="btn btn-primary sm" id="edSave"><svg class="ic"><use href="#i-save"/></svg><span>保存</span></button>
+      </div>
+    </div>
+    <div class="editor-body"><textarea id="edArea" spellcheck="false"></textarea></div>
+    <div class="editor-foot">
+      <span id="edLang">shell</span>
+      <span id="edPos">行 1, 列 1</span>
+      <span class="grow"></span>
+      <span>Ctrl + S 保存 · Esc 关闭</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 通用确认 ============ -->
+<div class="overlay" id="confirmModal" hidden>
+  <div class="modal narrow">
+    <div class="modal-head">
+      <div class="modal-title" id="cfTitle">确认操作</div>
+    </div>
+    <div class="modal-body"><div class="confirm-text" id="cfBody"></div></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="cfCancel">取消</button>
+      <button class="btn btn-danger" id="cfOk">确认</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 注释 / 输入 ============ -->
+<div class="overlay" id="promptModal" hidden>
+  <div class="modal narrow">
+    <div class="modal-head"><div class="modal-title" id="pmTitle">输入</div></div>
+    <div class="modal-body">
+      <label class="field"><span id="pmLabel">名称</span><input id="pmInput" /></label>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="pmCancel">取消</button>
+      <button class="btn btn-primary" id="pmOk">确定</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MCP 服务 ============ -->
+<div class="overlay" id="mcpOverlay" hidden>
+  <div class="modal mcp-modal">
+    <div class="modal-head">
+      <div class="mcp-title-wrap">
+        <div class="mcp-title-badge"><svg class="ic"><use href="#i-plug"/></svg></div>
+        <div>
+          <div class="modal-title">MCP 服务</div>
+          <div class="modal-desc">把 ServerPilot 的服务器能力开放给 AI 客户端 · 仅监听本机回环</div>
+        </div>
+      </div>
+      <button class="btn btn-icon" id="mcpClose"><svg class="ic"><use href="#i-close"/></svg></button>
+    </div>
+
+    <div class="modal-body mcp-body">
+      <div class="mcp-hero">
+        <div class="mcp-hero-state">
+          <span class="mcp-dot" id="mcpDot"></span>
+          <div class="mcp-hero-txt">
+            <b id="mcpStateText">已停止</b>
+            <small id="mcpStateSub">服务未监听</small>
+          </div>
+        </div>
+        <label class="switch"><input type="checkbox" id="mcpEnabled" /><span class="track"></span><em>启用服务</em></label>
+      </div>
+
+      <div class="mcp-grid">
+        <label class="field"><span>接入地址</span>
+          <div class="row">
+            <input id="mcpUrl" readonly spellcheck="false" />
+            <button class="btn btn-icon sm" id="mcpCopyUrl" title="复制地址"><svg class="ic"><use href="#i-copy"/></svg></button>
+          </div>
+        </label>
+        <label class="field"><span>监听端口</span>
+          <div class="row">
+            <input id="mcpPort" spellcheck="false" />
+            <button class="btn btn-ghost sm" id="mcpApplyPort">应用</button>
+          </div>
+        </label>
+      </div>
+
+      <div class="mcp-token-box">
+        <div class="mcp-sec-head"><span>访问令牌 <em>Bearer</em></span>
+          <div class="mcp-token-acts">
+            <button class="btn btn-ghost sm" id="mcpCopyToken"><svg class="ic"><use href="#i-copy"/></svg><span>复制</span></button>
+            <button class="btn btn-ghost sm danger" id="mcpRotate"><svg class="ic"><use href="#i-key"/></svg><span>重置</span></button>
+          </div>
+        </div>
+        <div class="mcp-token-value" id="mcpToken">—</div>
+        <div class="mcp-note">令牌只存在本机配置文件，客户端接入时放在 Authorization 头中。</div>
+      </div>
+
+      <div class="mcp-switch-row">
+        <div>
+          <b>只读模式</b>
+          <small>仅允许读取与查看，禁止写文件、删除与执行命令</small>
+        </div>
+        <label class="switch"><input type="checkbox" id="mcpReadonly" /><span class="track"></span><em id="mcpReadonlyLabel">已开启</em></label>
+      </div>
+
+      <div class="mcp-section">
+        <div class="mcp-sec-head">
+          <span>客户端配置</span>
+          <div class="seg" id="mcpSeg">
+            <button type="button" class="seg-btn active" data-cfg="cursor">Cursor / HTTP</button>
+            <button type="button" class="seg-btn" data-cfg="claude">Claude Desktop</button>
+          </div>
+        </div>
+        <pre class="mcp-json" id="mcpConfig"></pre>
+        <button class="btn btn-ghost sm" id="mcpCopyCfg"><svg class="ic"><use href="#i-copy"/></svg><span>复制配置片段</span></button>
+      </div>
+
+      <div class="mcp-section">
+        <div class="mcp-sec-head"><span>暴露的工具 <em id="mcpToolCount">0</em></span></div>
+        <div class="mcp-tools" id="mcpTools"></div>
+      </div>
+
+      <div class="mcp-section">
+        <div class="mcp-sec-head"><span>调用记录 <em id="mcpCallCount">0</em></span>
+          <button class="btn btn-ghost sm" id="mcpClearLog">清空</button>
+        </div>
+        <div class="mcp-logs" id="mcpLogs"><div class="dim-text">还没有客户端调用</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 收藏夹 ============ -->
+<div class="overlay" id="favOverlay" hidden>
+  <div class="modal fav-modal">
+    <div class="modal-head">
+      <div class="mcp-title-wrap">
+        <div class="mcp-title-badge"><svg class="ic"><use href="#i-star"/></svg></div>
+        <div>
+          <div class="modal-title">收藏夹</div>
+          <div class="modal-desc">常访问的文件与目录 · 点击直接打开</div>
+        </div>
+      </div>
+      <button class="btn btn-icon" id="favClose"><svg class="ic"><use href="#i-close"/></svg></button>
+    </div>
+    <div class="modal-body fav-body">
+      <div class="fav-list" id="favList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 快速连接 ============ -->
+<div class="overlay palette" id="palette" hidden>
+  <div class="palette-box">
+    <div class="palette-input">
+      <svg class="ic"><use href="#i-search"/></svg>
+      <input id="paletteInput" placeholder="搜索服务器，或输入 IP 直连…" spellcheck="false" />
+      <kbd>Esc</kbd>
+    </div>
+    <div class="palette-list" id="paletteList"></div>
+  </div>
+</div>
+
+<!-- ============ 悬浮层 ============ -->
+<div class="toasts" id="toasts"></div>
+<div class="transfers" id="transfers"></div>
+<div class="ctx" id="ctxMenu" hidden></div>
+<script src="../node_modules/@xterm/xterm/lib/xterm.js"></script>
+<script src="../node_modules/@xterm/addon-fit/lib/addon-fit.js"></script>
+<script src="../node_modules/codemirror/lib/codemirror.js"></script>
+<script src="../node_modules/codemirror/mode/shell/shell.js"></script>
+<script src="../node_modules/codemirror/mode/javascript/javascript.js"></script>
+<script src="../node_modules/codemirror/mode/xml/xml.js"></script>
+<script src="../node_modules/codemirror/mode/css/css.js"></script>
+<script src="../node_modules/codemirror/mode/htmlmixed/htmlmixed.js"></script>
+<script src="../node_modules/codemirror/mode/yaml/yaml.js"></script>
+<script src="../node_modules/codemirror/mode/nginx/nginx.js"></script>
+<script src="../node_modules/codemirror/mode/python/python.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

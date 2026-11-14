@@ -1,0 +1,54 @@
+{
+  "name": "serverpilot",
+  "productName": "ServerPilot",
+  "version": "1.0.0",
+  "description": "ServerPilot - 服务器管理与部署工作台",
+  "author": "AllenCN",
+  "license": "MIT",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win portable"
+  },
+  "dependencies": {
+    "ssh2": "^1.16.0",
+    "@xterm/xterm": "^5.5.0",
+    "@xterm/addon-fit": "^0.10.0",
+    "codemirror": "^5.65.16"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.allencn.serverpilot",
+    "productName": "ServerPilot",
+    "directories": {
+      "output": "../dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "renderer/**/*",
+      "build/icon.ico",
+      "node_modules/**/*",
+      "!tools/**",
+      "!build/make_icon.py",
+      "!build/icon.png"
+    ],
+    "asar": true,
+    "compression": "maximum",
+    "win": {
+      "target": ["portable"],
+      "icon": "build/icon.ico",
+      "artifactName": "ServerPilot-${version}-portable.exe"
+    },
+    "portable": {
+      "artifactName": "ServerPilot-${version}-portable.exe",
+      "requestExecutionLevel": "user",
+      "unpackDirName": "ServerPilot"
+    }
+  }
+}
